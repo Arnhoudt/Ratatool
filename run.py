@@ -3,19 +3,13 @@ import os
 import sys
 
 import cv2 as cv
+import numpy as np
+
+import RatUtils
 from progress.bar import Bar
+from PIL import ImageGrab
 
 from DataVisualizer import DataVisualizer
-
-
-"""
-INLINE DOCUMENTATION
-
-# How it detests if the game is loading
-For artistic reasons the game uses an other resolution when showing cutscenes, this resolution is kept when loading
-This means that the only thing we need to do to check if the game is loading is checking if there are 2 pixels
-in the top of the screen that are (almost) black
-"""
 
 #   SETTINGS
 
@@ -39,56 +33,83 @@ SHOW_DATA_ON_SCREEN = True
 # font
 FONT = cv.FONT_HERSHEY_SIMPLEX
 
-#how frequently should the progress bar get updated
+# how frequently should the progress bar get updated
 PROGRESS_BAR_FRAME_SKIPS = 300
 
-# SHOW VIDEO
+# shows the black pixel detectors
+SHOW_BLACK_PIXEL_DETECTORS = False
+
+# Show video
 VISUAL = False
+
+# Beginning and end
+BEGIN_FRAME = 0
+END_FRAME = -1
+
+# Live mode [DOES NOT WORK]
+LIVE_MODE = False
 
 #   END OF SETTINGS
 
 video = ""
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "vi:s:", ["input=", "skips="])
+    opts, args = getopt.getopt(sys.argv[1:], "ldvi:s:b:e:", ["input=", "skips=", "begin_frame=", "end_frame="])
 except getopt.GetoptError:
-    print("run.py -i <inputvideo> -s <progress_bar_frame_skips>")
+    print("run.py -i <inputvideo> -s <progress_bar_frame_skips> -b <begin_frame> -e <end_frame>")
     sys.exit(2)
 for opt, arg in opts:
     if opt in ("-i", "--inputvideo"):
         video = arg
     elif opt in ("-v", "--visual"):
         VISUAL = True
+    elif opt in ("-d", "--detector"):
+        SHOW_BLACK_PIXEL_DETECTORS = True
     elif opt in ("-s", "--skips"):
         PROGRESS_BAR_FRAME_SKIPS = int(arg)
+    elif opt in ("-b", "--begin_frame"):
+        BEGIN_FRAME = int(arg)
+    elif opt in ("-e", "--end_frame"):
+        END_FRAME = int(arg)
+    elif opt in ("-l", "--live"):
+        print("live mode does not work")
+        exit()
+        # LIVE_MODE = True
 
+if not VISUAL and SHOW_BLACK_PIXEL_DETECTORS:
+    VISUAL = True  # If a user enables black pixel detectors the visual should also be shown
 
 if not os.path.isfile(video):
     print("Oops, I could not find this video {}".format(video))
     sys.exit()
-cap = cv.VideoCapture(video)
+cap = cv.VideoCapture()
 cap.open(video)
+cap.set(cv.CAP_PROP_POS_FRAMES, BEGIN_FRAME)
+
 width = int(cap.get(cv.CAP_PROP_FRAME_WIDTH))
 
 frameCounter = 0
 loadingFrameCounter = 0
-totalFrames = cap.get(cv.CAP_PROP_FRAME_COUNT)
 frameRate = cap.get(cv.CAP_PROP_FPS)
+if END_FRAME == -1:
+    END_FRAME = cap.get(cv.CAP_PROP_FRAME_COUNT)
+totalFrames = END_FRAME - BEGIN_FRAME
 
 dataVisualizer = DataVisualizer(FONT)
 
-progressBar = Bar('Processing', max=totalFrames//PROGRESS_BAR_FRAME_SKIPS, suffix='%(index)d/%(max)d - %(percent).1f%% - %(eta)ds')
+if not VISUAL:
+    progressBar = Bar('Processing', max=totalFrames // PROGRESS_BAR_FRAME_SKIPS, suffix='%(index)d/%(max)d - %('
+                                                                                        'percent).1f%% - %(eta)ds')
 
 while True:
     frameCounter += 1
-    ret, frame = cap.read()
-    loading = True
+    if LIVE_MODE:
+        printscreen_pil = ImageGrab.grab()
+        frame = cv.resize(np.array(printscreen_pil, dtype="uint8"), (0, 0), fx=0.2, fy=0.2)
+    else:
+        ret, frame = cap.read()
 
-    for pixel in PIXELS_TO_CHECK:
-        if frame[pixel[0], width // 2 + pixel[1]][0] > BLACK_THRESHOLD:
-            loading = False
-
-    if loading:
+    if RatUtils.isLoadingFrame(frame, PIXELS_TO_CHECK, BLACK_THRESHOLD, width):
         loadingFrameCounter += 1
 
     if VISUAL:
@@ -97,24 +118,23 @@ while True:
         dataVisualizer.add("{} loading frames".format(loadingFrameCounter), DataVisualizer.TEXT)
         dataVisualizer.add("{}%".format(round(loadingFrameCounter / frameCounter * 100, 2)), DataVisualizer.TEXT)
         dataVisualizer.add("framerate: {}".format(frameRate), DataVisualizer.TEXT)
-        seconds = frameCounter // frameRate
-        minutes = int(seconds // 60)
-        seconds = int(seconds % 60)
+        minutes, seconds = RatUtils.timeCalc(frameCounter // frameRate)
         dataVisualizer.add("realtime: {:02d}:{:02d}".format(minutes, seconds), DataVisualizer.TEXT)
-        seconds = (frameCounter - loadingFrameCounter) // frameRate
-        minutes = int(seconds // 60)
-        seconds = int(seconds % 60)
+        minutes, seconds = RatUtils.timeCalc(frameCounter // frameRate)
         dataVisualizer.add("without loads: {:02d}:{:02d}".format(minutes, seconds), DataVisualizer.TEXT)
         dataVisualizer.display(frame)
         cv.imshow("ratatool", frame)
+    elif frameCounter % PROGRESS_BAR_FRAME_SKIPS == 0:
+        progressBar.next()
 
     if cv.waitKey(1) & 0xFF == ord(EXIT_KEY):
         break
-    if frameCounter % PROGRESS_BAR_FRAME_SKIPS == 0:
-        progressBar.next()
-        #print("{} seconds without loading".format((frameCounter - loadingFrameCounter) / frameRate))
-    # print(loading)
+    if frameCounter == END_FRAME - BEGIN_FRAME:
+        break
 
 cap.release()
-progressBar.finish()
-# cv.destroyWindow('frame')
+if VISUAL and frameCounter == END_FRAME - BEGIN_FRAME:
+    cv.waitKey(0)
+    cv.destroyWindow('frame')
+else:
+    progressBar.finish()

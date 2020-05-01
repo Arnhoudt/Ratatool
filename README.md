@@ -1,5 +1,9 @@
 # Ratatool
 A set of tools to make ratatouille speedrunning fair
+## How it detects if the game is loading
+For artistic reasons the game uses an other resolution when showing cut scenes, this resolution is kept when loading
+This means that the only thing we need to do to check if the game is loading is checking if there are x (almost) black pixels
+in the top and bottom of the screen 
 
 ## Installation
 ### clone
