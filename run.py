@@ -1,6 +1,11 @@
+import getopt
+import os
+import sys
+
 import cv2 as cv
 
 from DataVisualizer import DataVisualizer
+
 
 """
 INLINE DOCUMENTATION
@@ -35,9 +40,25 @@ FONT = cv.FONT_HERSHEY_SIMPLEX
 
 #   END OF SETTINGS
 
+video = ""
 
-cap = cv.VideoCapture("slicer.mkv")
-cap.open("slicer.mkv")
+try:
+    opts, args = getopt.getopt(sys.argv[1:], "hi:", ["input="])
+except getopt.GetoptError:
+    print("run.py -i <inputvideo>")
+    sys.exit(2)
+for opt, arg in opts:
+    if opt == '-h':
+        print("run.py -i <inputvideo>")
+        sys.exit()
+    elif opt in ("-i", "--inputvideo"):
+        video = arg
+
+if not os.path.isfile(video):
+    print("Oops, I could not find this video {}".format(video))
+    sys.exit()
+cap = cv.VideoCapture(video)
+cap.open(video)
 width = int(cap.get(cv.CAP_PROP_FRAME_WIDTH))
 
 frameCounter = 0
