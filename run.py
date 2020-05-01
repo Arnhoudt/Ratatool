@@ -3,6 +3,7 @@ import os
 import sys
 
 import cv2 as cv
+from progress.bar import Bar
 
 from DataVisualizer import DataVisualizer
 
@@ -38,21 +39,29 @@ SHOW_DATA_ON_SCREEN = True
 # font
 FONT = cv.FONT_HERSHEY_SIMPLEX
 
+#how frequently should the progress bar get updated
+PROGRESS_BAR_FRAME_SKIPS = 300
+
+# SHOW VIDEO
+VISUAL = False
+
 #   END OF SETTINGS
 
 video = ""
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "hi:", ["input="])
+    opts, args = getopt.getopt(sys.argv[1:], "vi:s:", ["input=", "skips="])
 except getopt.GetoptError:
-    print("run.py -i <inputvideo>")
+    print("run.py -i <inputvideo> -s <progress_bar_frame_skips>")
     sys.exit(2)
 for opt, arg in opts:
-    if opt == '-h':
-        print("run.py -i <inputvideo>")
-        sys.exit()
-    elif opt in ("-i", "--inputvideo"):
+    if opt in ("-i", "--inputvideo"):
         video = arg
+    elif opt in ("-v", "--visual"):
+        VISUAL = True
+    elif opt in ("-s", "--skips"):
+        PROGRESS_BAR_FRAME_SKIPS = int(arg)
+
 
 if not os.path.isfile(video):
     print("Oops, I could not find this video {}".format(video))
@@ -68,6 +77,8 @@ frameRate = cap.get(cv.CAP_PROP_FPS)
 
 dataVisualizer = DataVisualizer(FONT)
 
+progressBar = Bar('Processing', max=totalFrames//PROGRESS_BAR_FRAME_SKIPS, suffix='%(index)d/%(max)d - %(percent).1f%% - %(eta)ds')
+
 while True:
     frameCounter += 1
     ret, frame = cap.read()
@@ -80,8 +91,7 @@ while True:
     if loading:
         loadingFrameCounter += 1
 
-    if SHOW_DATA_ON_SCREEN:
-
+    if VISUAL:
         dataVisualizer.add("Data", DataVisualizer.HEADER)
         dataVisualizer.add("frame: {}/{}".format(frameCounter, totalFrames), DataVisualizer.TEXT)
         dataVisualizer.add("{} loading frames".format(loadingFrameCounter), DataVisualizer.TEXT)
@@ -91,21 +101,20 @@ while True:
         minutes = int(seconds // 60)
         seconds = int(seconds % 60)
         dataVisualizer.add("realtime: {:02d}:{:02d}".format(minutes, seconds), DataVisualizer.TEXT)
-        seconds = (frameCounter-loadingFrameCounter) // frameRate
+        seconds = (frameCounter - loadingFrameCounter) // frameRate
         minutes = int(seconds // 60)
         seconds = int(seconds % 60)
         dataVisualizer.add("without loads: {:02d}:{:02d}".format(minutes, seconds), DataVisualizer.TEXT)
         dataVisualizer.display(frame)
-
-    if SHOW_VIDEO:
-        #cv.imshow("frame", cv.resize(frame, (0, 0), fx=0.4, fy=0.4))
         cv.imshow("ratatool", frame)
 
     if cv.waitKey(1) & 0xFF == ord(EXIT_KEY):
         break
-    if frameCounter % 30 == 0:
-        print("{} seconds without loading".format((frameCounter - loadingFrameCounter) / frameRate))
+    if frameCounter % PROGRESS_BAR_FRAME_SKIPS == 0:
+        progressBar.next()
+        #print("{} seconds without loading".format((frameCounter - loadingFrameCounter) / frameRate))
     # print(loading)
 
 cap.release()
+progressBar.finish()
 # cv.destroyWindow('frame')

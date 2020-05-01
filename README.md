@@ -22,6 +22,13 @@ pip3 install opencv-python
 ### start the script
 python3 run.py speedrun.mkv
 
+# Flags
+## not optional
+    -i <video> : location of the video
+## optional
+    -v : shows the speedrun visually.\
+    -s : how much frames the progress bar should skip before updating again (default: 300).
+
 # Features
 Watch your run with data analizer
 
