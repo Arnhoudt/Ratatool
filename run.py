@@ -7,7 +7,7 @@ import numpy as np
 
 import RatUtils
 from progress.bar import Bar
-from PIL import ImageGrab
+from PIL import ImageGrab, ImageFont
 
 from DataVisualizer import DataVisualizer
 
@@ -19,7 +19,10 @@ BLACK_THRESHOLD = 5
 # PIXELS TO CHECK
 # Checks the pixels relative to the top center of the video [row, col]
 # More pixels = less false detections
-PIXELS_TO_CHECK = [[50, -50], [50, 50]]
+# PIXELS_TO_CHECK = [[30, -50], [30, 50]]
+
+PIXELS_TO_CHECK = [[530, -350], [525, -300], [530, -250], [535, -200], [530, -150], [525, -100], [530, -50], [535, 0],
+                   [530, 50], ]
 
 # Show the video
 SHOW_VIDEO = True
@@ -49,19 +52,38 @@ END_FRAME = -1
 # Live mode [DOES NOT WORK]
 LIVE_MODE = False
 
+# Splits
+SPLITS = False
+SPLIT_POINTS = [["tutorial", 0],
+                ["river", 0],
+                ["streets", 0],
+                ["soup", 0],
+                ["big skip", 0],
+                ["plates", 0],
+                ["shrimps", 0],
+                ["book", 0],
+                ["cooking", 0],
+                ["RUN!!!", 0]]
+
 #   END OF SETTINGS
 
 video = ""
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "ldvi:s:b:e:", ["input=", "skips=", "begin_frame=", "end_frame="])
+    opts, args = getopt.getopt(sys.argv[1:], "Sldvi:s:b:e:p:t:",
+                               ["input=", "skips=", "begin_frame=", "end_frame=", "pixels=", "threshold="])
 except getopt.GetoptError:
     print("run.py -i <inputvideo> -s <progress_bar_frame_skips> -b <begin_frame> -e <end_frame>")
     sys.exit(2)
 for opt, arg in opts:
+    if opt in ("-S", "--splits"):
+        SPLITS = True
     if opt in ("-i", "--inputvideo"):
         video = arg
+    if opt in ("-t", "--threshold"):
+        BLACK_THRESHOLD = int(arg)
     elif opt in ("-v", "--visual"):
+        print("setting visual true")
         VISUAL = True
     elif opt in ("-d", "--detector"):
         SHOW_BLACK_PIXEL_DETECTORS = True
@@ -75,13 +97,15 @@ for opt, arg in opts:
         print("live mode does not work")
         exit()
         # LIVE_MODE = True
-
-if not VISUAL and SHOW_BLACK_PIXEL_DETECTORS:
-    VISUAL = True  # If a user enables black pixel detectors the visual should also be shown
+    elif opt in ("-p", "--pixels"):
+        print("im sorry but you can't use that feature yet")
+        exit()
+        # PIXELS_TO_CHECK = arg
 
 if not os.path.isfile(video):
     print("Oops, I could not find this video {}".format(video))
     sys.exit()
+
 cap = cv.VideoCapture()
 cap.open(video)
 cap.set(cv.CAP_PROP_POS_FRAMES, BEGIN_FRAME)
@@ -97,9 +121,59 @@ totalFrames = END_FRAME - BEGIN_FRAME
 
 dataVisualizer = DataVisualizer(FONT)
 
-if not VISUAL:
-    progressBar = Bar('Processing', max=totalFrames // PROGRESS_BAR_FRAME_SKIPS, suffix='%(index)d/%(max)d - %('
-                                                                                        'percent).1f%% - %(eta)ds')
+progressBar = Bar('Processing', max=totalFrames // PROGRESS_BAR_FRAME_SKIPS, suffix='%(index)d/%(max)d - %('
+                                                                                    'percent).1f%% - %(eta)ds')
+
+
+def display():
+    if SHOW_BLACK_PIXEL_DETECTORS:
+        RatUtils.showDetectors(frame, PIXELS_TO_CHECK, width)
+    dataVisualizer.add("Ratatool", DataVisualizer.HEADER)
+    dataVisualizer.add("frame: {}/{}".format(frameCounter, totalFrames), DataVisualizer.TEXT)
+    dataVisualizer.add("{} loading frames".format(loadingFrameCounter), DataVisualizer.TEXT)
+    dataVisualizer.add("{}%".format(round(loadingFrameCounter / frameCounter * 100, 2)), DataVisualizer.TEXT)
+    dataVisualizer.add("framerate: {}".format(frameRate), DataVisualizer.TEXT)
+    minutes, seconds = RatUtils.timeCalc(frameCounter // frameRate)
+    dataVisualizer.add("realtime: {:02d}:{:02d}".format(minutes, seconds), DataVisualizer.TEXT)
+    minutes, seconds = RatUtils.timeCalc((frameCounter - loadingFrameCounter) // frameRate)
+    dataVisualizer.add("without loads: {:02d}:{:02d}".format(minutes, seconds), DataVisualizer.TEXT)
+    dataVisualizer.display(frame)
+    cv.imshow("ratatool", frame)
+
+
+if SPLITS:
+    # I know the numbers look a little derpy, there are multiple ways to fix this
+    # If you want to you may fix it
+    splitVisualizer = DataVisualizer(FONT, y=400)
+    speed = 10
+    activeSplit = 0
+    while True:
+        k = cv.waitKey(0)
+        if k & 0xFF == ord(EXIT_KEY):
+            break
+        elif k & 0xFF == ord("j"):
+            speed += 1
+        elif k & 0xFF == ord("k"):
+            speed -= 1
+        elif k & 0xFF == ord("h"):
+            frameCounter -= speed
+        elif k & 0xFF == ord("l"):
+            frameCounter += speed
+        SPLIT_POINTS[activeSplit][1] = frameCounter
+        splitVisualizer.add("Splits", DataVisualizer.HEADER)
+        splitVisualizer.add("Speed: " + str(speed), DataVisualizer.TEXT)
+        for split in SPLIT_POINTS:
+            splitVisualizer.add("{0: <20}".format(split[0]) + str(split[1]), DataVisualizer.TEXT)
+        cap.set(cv.CAP_PROP_POS_FRAMES, frameCounter + BEGIN_FRAME)
+        ret, frame = cap.read()
+        splitVisualizer.display(frame)
+        cv.imshow("splitfinder", frame)
+
+
+    cap.set(cv.CAP_PROP_POS_FRAMES, BEGIN_FRAME)
+    cv.destroyWindow('splitfinder')
+
+exit()
 
 while True:
     frameCounter += 1
@@ -113,18 +187,9 @@ while True:
         loadingFrameCounter += 1
 
     if VISUAL:
-        dataVisualizer.add("Data", DataVisualizer.HEADER)
-        dataVisualizer.add("frame: {}/{}".format(frameCounter, totalFrames), DataVisualizer.TEXT)
-        dataVisualizer.add("{} loading frames".format(loadingFrameCounter), DataVisualizer.TEXT)
-        dataVisualizer.add("{}%".format(round(loadingFrameCounter / frameCounter * 100, 2)), DataVisualizer.TEXT)
-        dataVisualizer.add("framerate: {}".format(frameRate), DataVisualizer.TEXT)
-        minutes, seconds = RatUtils.timeCalc(frameCounter // frameRate)
-        dataVisualizer.add("realtime: {:02d}:{:02d}".format(minutes, seconds), DataVisualizer.TEXT)
-        minutes, seconds = RatUtils.timeCalc(frameCounter // frameRate)
-        dataVisualizer.add("without loads: {:02d}:{:02d}".format(minutes, seconds), DataVisualizer.TEXT)
-        dataVisualizer.display(frame)
-        cv.imshow("ratatool", frame)
-    elif frameCounter % PROGRESS_BAR_FRAME_SKIPS == 0:
+        display()
+
+    if frameCounter % PROGRESS_BAR_FRAME_SKIPS == 0:
         progressBar.next()
 
     if cv.waitKey(1) & 0xFF == ord(EXIT_KEY):
@@ -135,6 +200,11 @@ while True:
 cap.release()
 if VISUAL and frameCounter == END_FRAME - BEGIN_FRAME:
     cv.waitKey(0)
-    cv.destroyWindow('frame')
+    cv.destroyWindow('ratatool')
 else:
+    display()
+    while True:
+        if cv.waitKey(1) & 0xFF == ord(EXIT_KEY):
+            break
+    cv.destroyWindow('ratatool')
     progressBar.finish()

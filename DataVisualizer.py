@@ -10,26 +10,34 @@ class DataVisualizer:
 
     yPos = 0
 
-    def __init__(self, font, marginLeft=30):
+    def __init__(self, font, x=0, y=0, marginLeft=20):
         self.font = font
         self.marginLeft = marginLeft
+        self.x = x
+        self.y = y
+        self.yPos = y
+        print("y="+str(y))
 
     def add(self, text, size):
         self.data.append({"text": text, "size": size})
 
     def display(self, frame):
-        cv.rectangle(frame, (0, 0), (300, 300), (0, 0, 0), -1)
+        cv.rectangle(frame, (self.x, self.y), (300 + self.x, 300 + self.y), (0, 0, 0), -1)
         for info in self.data:
             if info["size"] == self.HEADER:
                 self.yPos += 50
-                cv.putText(frame, info["text"], (self.marginLeft, self.yPos), self.font, 1.5, (255, 255, 255), 2, cv.LINE_AA)
+                cv.putText(frame, info["text"], (self.marginLeft, self.yPos), self.font, 1.5, (255, 255, 255), 2,
+                           cv.LINE_AA)
+                self.yPos += 10
 
             if info["size"] == self.SUBTITLE:
                 self.yPos += 40
-                cv.putText(frame, info["text"], (self.marginLeft + 3, self.yPos), self.font, 1, (255, 255, 255), 1.5, cv.LINE_AA)
+                cv.putText(frame, info["text"], (self.marginLeft + 2, self.yPos), self.font, 1, (255, 255, 255), 1.5,
+                           cv.LINE_AA)
 
             if info["size"] == self.TEXT:
-                self.yPos += 25
-                cv.putText(frame, info["text"], (self.marginLeft + 6, self.yPos), self.font, 0.5, (255, 255, 255), 1, cv.LINE_AA)
+                self.yPos += 20
+                cv.putText(frame, info["text"], (self.marginLeft + 4, self.yPos), self.font, 0.5, (255, 255, 255), 1,
+                           cv.LINE_AA)
         self.data = []
-        self.yPos = 0
+        self.yPos = self.y
