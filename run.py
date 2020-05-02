@@ -65,13 +65,17 @@ SPLIT_POINTS = [["tutorial", 0],
                 ["cooking", 0],
                 ["RUN!!!", 0]]
 
+# Output
+OUTPUT = False
+outputLocation = ""
+
 #   END OF SETTINGS
 
 video = ""
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "Sldvi:s:b:e:p:t:",
-                               ["input=", "skips=", "begin_frame=", "end_frame=", "pixels=", "threshold="])
+    opts, args = getopt.getopt(sys.argv[1:], "Sldvi:s:b:e:p:t:o:",
+                               ["input=", "skips=", "begin_frame=", "end_frame=", "pixels=", "threshold=", "output="])
 except getopt.GetoptError:
     print("run.py -i <inputvideo> -s <progress_bar_frame_skips> -b <begin_frame> -e <end_frame>")
     sys.exit(2)
@@ -100,16 +104,27 @@ for opt, arg in opts:
         print("im sorry but you can't use that feature yet")
         exit()
         # PIXELS_TO_CHECK = arg
+    elif opt in ("-o", "--output"):
+        OUTPUT = True
+        outputLocation = arg
 
 if not os.path.isfile(video):
     print("Oops, I could not find this video {}".format(video))
     sys.exit()
+
 
 cap = cv.VideoCapture()
 cap.open(video)
 cap.set(cv.CAP_PROP_POS_FRAMES, BEGIN_FRAME)
 
 width = int(cap.get(cv.CAP_PROP_FRAME_WIDTH))
+height = int(cap.get(cv.CAP_PROP_FRAME_HEIGHT))
+
+out = 0
+if OUTPUT:
+    fourcc = cv.VideoWriter_fourcc(*'XVID')
+    out = cv.VideoWriter(outputLocation, fourcc, 20.0, (width, height))
+
 
 frameCounter = 0
 loadingFrameCounter = 0
@@ -134,7 +149,6 @@ def display():
     minutes, seconds = RatUtils.timeCalc((frameCounter - loadingFrameCounter) // frameRate)
     dataVisualizer.add("without loads: {:02d}:{:02d}".format(minutes, seconds), DataVisualizer.TEXT)
     dataVisualizer.display(frame)
-    cv.imshow("ratatool", frame)
 
 
 if SPLITS:
@@ -207,7 +221,9 @@ while True:
 
     if VISUAL:
         display()
-
+        cv.imshow("ratatool", frame)
+        if OUTPUT:
+            out.write(frame)
     if frameCounter % PROGRESS_BAR_FRAME_SKIPS == 0:
         progressBar.next()
 
@@ -217,6 +233,7 @@ while True:
         break
 
 cap.release()
+out.release()
 if VISUAL and frameCounter == END_FRAME - BEGIN_FRAME:
     cv.waitKey(0)
     cv.destroyWindow('ratatool')
