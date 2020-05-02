@@ -83,7 +83,6 @@ for opt, arg in opts:
     if opt in ("-t", "--threshold"):
         BLACK_THRESHOLD = int(arg)
     elif opt in ("-v", "--visual"):
-        print("setting visual true")
         VISUAL = True
     elif opt in ("-d", "--detector"):
         SHOW_BLACK_PIXEL_DETECTORS = True
@@ -121,9 +120,6 @@ totalFrames = END_FRAME - BEGIN_FRAME
 
 dataVisualizer = DataVisualizer(FONT)
 
-progressBar = Bar('Processing', max=totalFrames // PROGRESS_BAR_FRAME_SKIPS, suffix='%(index)d/%(max)d - %('
-                                                                                    'percent).1f%% - %(eta)ds')
-
 
 def display():
     if SHOW_BLACK_PIXEL_DETECTORS:
@@ -159,6 +155,10 @@ if SPLITS:
             frameCounter -= speed
         elif k & 0xFF == ord("l"):
             frameCounter += speed
+        elif k & 0xFF == ord(" "):
+            activeSplit += 1
+        if activeSplit > len(SPLIT_POINTS) - 1:
+            break
         SPLIT_POINTS[activeSplit][1] = frameCounter
         splitVisualizer.add("Splits", DataVisualizer.HEADER)
         splitVisualizer.add("Speed: " + str(speed), DataVisualizer.TEXT)
@@ -169,11 +169,14 @@ if SPLITS:
         splitVisualizer.display(frame)
         cv.imshow("splitfinder", frame)
 
-
     cap.set(cv.CAP_PROP_POS_FRAMES, BEGIN_FRAME)
     cv.destroyWindow('splitfinder')
+    frameCounter = 0
 
-exit()
+progressBar = Bar('Processing', max=totalFrames // PROGRESS_BAR_FRAME_SKIPS, suffix='%(index)d/%(max)d - %('
+                                                                                    'percent).1f%% - %(eta)ds')
+
+activeSplit = 0
 
 while True:
     frameCounter += 1
@@ -185,6 +188,22 @@ while True:
 
     if RatUtils.isLoadingFrame(frame, PIXELS_TO_CHECK, BLACK_THRESHOLD, width):
         loadingFrameCounter += 1
+
+    if SPLITS:
+        sv = DataVisualizer(FONT, y=400)
+        sv.add("Splits", DataVisualizer.HEADER)
+        for split in SPLIT_POINTS:
+            if split[1] < frameCounter:
+                sv.add("{0: <20}".format(split[0]) + str(split[1]), DataVisualizer.TEXT)
+            elif split is SPLIT_POINTS[activeSplit]:
+                sv.add("{0: <20}".format(split[0]) + str(frameCounter), DataVisualizer.TEXT)
+            else:
+                sv.add("{0: <20}".format(split[0]) + str(0), DataVisualizer.TEXT)
+        if SPLIT_POINTS[activeSplit][1] == frameCounter:
+            activeSplit += 1
+        if activeSplit > len(SPLIT_POINTS) - 1:
+            break
+        sv.display(frame)
 
     if VISUAL:
         display()

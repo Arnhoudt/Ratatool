@@ -6,17 +6,13 @@ class DataVisualizer:
     SUBTITLE = 2
     TEXT = 3
 
-    data = []
-
-    yPos = 0
-
     def __init__(self, font, x=0, y=0, marginLeft=20):
         self.font = font
         self.marginLeft = marginLeft
         self.x = x
         self.y = y
         self.yPos = y
-        print("y="+str(y))
+        self.data = []
 
     def add(self, text, size):
         self.data.append({"text": text, "size": size})
