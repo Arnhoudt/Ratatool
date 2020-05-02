@@ -20,7 +20,6 @@ BLACK_THRESHOLD = 5
 # Checks the pixels relative to the top center of the video [row, col]
 # More pixels = less false detections
 # PIXELS_TO_CHECK = [[30, -50], [30, 50]]
-
 PIXELS_TO_CHECK = [[530, -350], [525, -300], [530, -250], [535, -200], [530, -150], [525, -100], [530, -50], [535, 0],
                    [530, 50], ]
 
@@ -112,19 +111,12 @@ if not os.path.isfile(video):
     print("Oops, I could not find this video {}".format(video))
     sys.exit()
 
-
 cap = cv.VideoCapture()
 cap.open(video)
 cap.set(cv.CAP_PROP_POS_FRAMES, BEGIN_FRAME)
 
 width = int(cap.get(cv.CAP_PROP_FRAME_WIDTH))
 height = int(cap.get(cv.CAP_PROP_FRAME_HEIGHT))
-
-out = 0
-if OUTPUT:
-    fourcc = cv.VideoWriter_fourcc(*'XVID')
-    out = cv.VideoWriter(outputLocation, fourcc, 20.0, (width, height))
-
 
 frameCounter = 0
 loadingFrameCounter = 0
@@ -134,6 +126,10 @@ if END_FRAME == -1:
 totalFrames = END_FRAME - BEGIN_FRAME
 
 dataVisualizer = DataVisualizer(FONT)
+
+out = 0
+if OUTPUT:
+    out = cv.VideoWriter(outputLocation, cv.VideoWriter_fourcc(*'XVID'), frameRate, (width, height))
 
 
 def display():
