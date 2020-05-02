@@ -19,9 +19,8 @@ BLACK_THRESHOLD = 5
 # PIXELS TO CHECK
 # Checks the pixels relative to the top center of the video [row, col]
 # More pixels = less false detections
-# PIXELS_TO_CHECK = [[30, -50], [30, 50]]
-PIXELS_TO_CHECK = [[530, -350], [525, -300], [530, -250], [535, -200], [530, -150], [525, -100], [530, -50], [535, 0],
-                   [530, 50], ]
+PIXELS_TO_CHECK = [[30, -50], [30, 50]]
+#PIXELS_TO_CHECK = [[530, -350], [525, -300], [530, -250], [535, -200], [530, -150], [525, -100], [530, -50], [535, 0], [530, 50], ]
 
 # Show the video
 SHOW_VIDEO = True
