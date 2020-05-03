@@ -20,20 +20,22 @@ class DataVisualizer:
     def display(self, frame):
         cv.rectangle(frame, (self.x, self.y), (300 + self.x, 300 + self.y), (0, 0, 0), -1)
         for info in self.data:
+            size = 0
             if info["size"] == self.HEADER:
                 self.yPos += 50
-                cv.putText(frame, info["text"], (self.marginLeft, self.yPos), self.font, 1.5, (info["blue"], info["green"], info["red"]), 2,
-                           cv.LINE_AA)
-                self.yPos += 10
+                size = 1.5
 
             if info["size"] == self.SUBTITLE:
                 self.yPos += 40
-                cv.putText(frame, info["text"], (self.marginLeft + 2, self.yPos), self.font, 1, (info["blue"], info["green"], info["red"]), 1.5,
-                           cv.LINE_AA)
+                size = 1
 
             if info["size"] == self.TEXT:
                 self.yPos += 20
-                cv.putText(frame, info["text"], (self.marginLeft + 4, self.yPos), self.font, 0.5, (info["blue"], info["green"], info["red"]), 1,
-                           cv.LINE_AA)
+                size = 0.5
+
+            cv.putText(frame, info["text"], (self.marginLeft + 4, self.yPos), self.font, size, (info["blue"], info["green"], info["red"]), size + 0.5, cv.LINE_AA)
+            if info["size"] == self.HEADER:
+                self.yPos += 10
+
         self.data = []
         self.yPos = self.y

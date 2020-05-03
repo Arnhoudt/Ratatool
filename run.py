@@ -155,7 +155,7 @@ if SPLITS:
     # I know the numbers look a little derpy, there are multiple ways to fix this
     # If you want to you may fix it
     splitVisualizer = DataVisualizer(FONT, y=400)
-    speed = 10
+    speed = frameRate
     activeSplit = 0
     while True:
         k = cv.waitKey(0)
@@ -220,11 +220,15 @@ while True:
         sv.add("Splits", DataVisualizer.HEADER)
         for split in SPLIT_POINTS:
             if split[1] < frameCounter:
-                sv.add("{0: <20}".format(split[0]) + str(split[1]), DataVisualizer.TEXT, r=0, g=255, b=0)
+                minutes, seconds = RatUtils.timeCalc(split[1] // frameRate)
+                r, g, b = 0, 255, 0
             elif split is SPLIT_POINTS[activeSplit]:
-                sv.add("{0: <20}".format(split[0]) + str(frameCounter), DataVisualizer.TEXT, r=0, g=255, b=255)
+                minutes, seconds = RatUtils.timeCalc(frameCounter // frameRate)
+                r, g, b = 0, 255, 255
             else:
-                sv.add("{0: <20}".format(split[0]) + str(0), DataVisualizer.TEXT, r=200, g=200, b=200)
+                r, g, b = 200, 200, 200
+                minutes, seconds = RatUtils.timeCalc(0)
+            sv.add("{0:<20}{1:d}:{2:02d}".format(split[0], minutes, seconds), DataVisualizer.TEXT, r=r, g=g, b=b)
         if SPLIT_POINTS[activeSplit][1] == frameCounter:
             activeSplit += 1
         if activeSplit > len(SPLIT_POINTS) - 1:
