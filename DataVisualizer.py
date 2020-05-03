@@ -33,7 +33,12 @@ class DataVisualizer:
                 self.yPos += 20
                 size = 0.5
 
-            cv.putText(frame, info["text"], (self.marginLeft + 4, self.yPos), self.font, size, (info["blue"], info["green"], info["red"]), size + 0.5, cv.LINE_AA)
+            posx = self.marginLeft
+            for col in info["text"]:
+                cv.putText(frame, col, (posx, self.yPos), self.font, size,
+                           (info["blue"], info["green"], info["red"]), int(size + 0.5), cv.LINE_AA)
+                posx += 120
+
             if info["size"] == self.HEADER:
                 self.yPos += 10
 

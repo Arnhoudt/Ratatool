@@ -139,21 +139,19 @@ if OUTPUT:
 def display():
     if SHOW_BLACK_PIXEL_DETECTORS:
         RatUtils.showDetectors(frame, PIXELS_TO_CHECK, width)
-    dataVisualizer.add("Ratatool", DataVisualizer.HEADER)
-    dataVisualizer.add("frame: {}/{}".format(frameCounter, totalFrames), DataVisualizer.TEXT)
-    dataVisualizer.add("{} loading frames".format(loadingFrameCounter), DataVisualizer.TEXT)
-    dataVisualizer.add("{}%".format(round(loadingFrameCounter / frameCounter * 100, 2)), DataVisualizer.TEXT)
-    dataVisualizer.add("framerate: {}".format(frameRate), DataVisualizer.TEXT)
+    dataVisualizer.add(["Ratatool"], DataVisualizer.HEADER)
+    dataVisualizer.add(["frame: {}/{}".format(frameCounter, totalFrames)], DataVisualizer.TEXT)
+    dataVisualizer.add(["{} loading frames".format(loadingFrameCounter)], DataVisualizer.TEXT)
+    dataVisualizer.add(["{}%".format(round(loadingFrameCounter / frameCounter * 100, 2))], DataVisualizer.TEXT)
+    dataVisualizer.add(["framerate: {}".format(frameRate)], DataVisualizer.TEXT)
     minutes, seconds = RatUtils.timeCalc(frameCounter // frameRate)
-    dataVisualizer.add("realtime: {:02d}:{:02d}".format(minutes, seconds), DataVisualizer.TEXT)
+    dataVisualizer.add(["realtime: {:02d}:{:02d}".format(minutes, seconds)], DataVisualizer.TEXT)
     minutes, seconds = RatUtils.timeCalc((frameCounter - loadingFrameCounter) // frameRate)
-    dataVisualizer.add("without loads: {:02d}:{:02d}".format(minutes, seconds), DataVisualizer.TEXT)
+    dataVisualizer.add(["without loads: {:02d}:{:02d}".format(minutes, seconds)], DataVisualizer.TEXT)
     dataVisualizer.display(frame)
 
 
 if SPLITS:
-    # I know the numbers look a little derpy, there are multiple ways to fix this
-    # If you want to you may fix it
     splitVisualizer = DataVisualizer(FONT, y=400)
     speed = frameRate
     activeSplit = 0
@@ -181,15 +179,15 @@ if SPLITS:
         if activeSplit > len(SPLIT_POINTS) - 1:
             break
         SPLIT_POINTS[activeSplit][1] = frameCounter
-        splitVisualizer.add("Splits", DataVisualizer.HEADER)
-        splitVisualizer.add("Speed: " + str(round(speed / frameRate, 2)) + " seconds", DataVisualizer.TEXT)
+        splitVisualizer.add(["Splits"], DataVisualizer.HEADER)
+        splitVisualizer.add(["Speed: " + str(round(speed / frameRate, 2)) + " seconds"], DataVisualizer.TEXT)
         for split in SPLIT_POINTS:
             minutes, seconds = RatUtils.timeCalc(split[1] // frameRate)
             if split is SPLIT_POINTS[activeSplit]:
-                splitVisualizer.add("{0:<20}{1:d}:{2:02d}".format(split[0], minutes, seconds), DataVisualizer.TEXT, r=0,
+                splitVisualizer.add([split[0], "{:d}:{:02d}".format(minutes, seconds)], DataVisualizer.TEXT, r=0,
                                     g=255, b=255)
             else:
-                splitVisualizer.add("{0:<20}{1:d}:{2:02d}".format(split[0], minutes, seconds), DataVisualizer.TEXT)
+                splitVisualizer.add([split[0], "{:d}:{:02d}".format(minutes, seconds)], DataVisualizer.TEXT)
         cap.set(cv.CAP_PROP_POS_FRAMES, frameCounter + BEGIN_FRAME)
         ret, frame = cap.read()
         splitVisualizer.display(frame)
@@ -217,7 +215,7 @@ while True:
 
     if SPLITS:
         sv = DataVisualizer(FONT, y=400)
-        sv.add("Splits", DataVisualizer.HEADER)
+        sv.add(["Splits"], DataVisualizer.HEADER)
         for split in SPLIT_POINTS:
             if split[1] < frameCounter:
                 minutes, seconds = RatUtils.timeCalc(split[1] // frameRate)
@@ -228,7 +226,7 @@ while True:
             else:
                 r, g, b = 200, 200, 200
                 minutes, seconds = RatUtils.timeCalc(0)
-            sv.add("{0:<20}{1:d}:{2:02d}".format(split[0], minutes, seconds), DataVisualizer.TEXT, r=r, g=g, b=b)
+            sv.add([split[0], "{:d}:{:02d}".format(minutes, seconds)], DataVisualizer.TEXT, r=r, g=g, b=b)
         if SPLIT_POINTS[activeSplit][1] == frameCounter:
             activeSplit += 1
         if activeSplit > len(SPLIT_POINTS) - 1:
