@@ -20,7 +20,7 @@ BLACK_THRESHOLD = 5
 # Checks the pixels relative to the top center of the video [row, col]
 # More pixels = less false detections
 PIXELS_TO_CHECK = [[30, -50], [30, 50]]
-#PIXELS_TO_CHECK = [[530, -350], [525, -300], [530, -250], [535, -200], [530, -150], [525, -100], [530, -50], [535, 0], [530, 50], ]
+# PIXELS_TO_CHECK = [[530, -350], [525, -300], [530, -250], [535, -200], [530, -150], [525, -100], [530, -50], [535, 0], [530, 50], ]
 
 # Show the video
 SHOW_VIDEO = True
@@ -67,17 +67,22 @@ SPLIT_POINTS = [["tutorial", 0],
 OUTPUT = False
 outputLocation = ""
 
+# Fullscreen (this reduces the speed dramatically)
+FULLSCREEN = False
+
 #   END OF SETTINGS
 
 video = ""
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "Sldvi:s:b:e:p:t:o:",
+    opts, args = getopt.getopt(sys.argv[1:], "fSldvi:s:b:e:p:t:o:",
                                ["input=", "skips=", "begin_frame=", "end_frame=", "pixels=", "threshold=", "output="])
 except getopt.GetoptError:
     print("run.py -i <inputvideo> -s <progress_bar_frame_skips> -b <begin_frame> -e <end_frame>")
     sys.exit(2)
 for opt, arg in opts:
+    if opt in ("-f", "--fullscreen"):
+        FULLSCREEN = True
     if opt in ("-S", "--splits"):
         SPLITS = True
     if opt in ("-i", "--inputvideo"):
@@ -134,23 +139,21 @@ if OUTPUT:
 def display():
     if SHOW_BLACK_PIXEL_DETECTORS:
         RatUtils.showDetectors(frame, PIXELS_TO_CHECK, width)
-    dataVisualizer.add("Ratatool", DataVisualizer.HEADER)
-    dataVisualizer.add("frame: {}/{}".format(frameCounter, totalFrames), DataVisualizer.TEXT)
-    dataVisualizer.add("{} loading frames".format(loadingFrameCounter), DataVisualizer.TEXT)
-    dataVisualizer.add("{}%".format(round(loadingFrameCounter / frameCounter * 100, 2)), DataVisualizer.TEXT)
-    dataVisualizer.add("framerate: {}".format(frameRate), DataVisualizer.TEXT)
+    dataVisualizer.add(["Ratatool"], DataVisualizer.HEADER)
+    dataVisualizer.add(["frame: {}/{}".format(frameCounter, totalFrames)], DataVisualizer.TEXT)
+    dataVisualizer.add(["{} loading frames".format(loadingFrameCounter)], DataVisualizer.TEXT)
+    dataVisualizer.add(["{}%".format(round(loadingFrameCounter / frameCounter * 100, 2))], DataVisualizer.TEXT)
+    dataVisualizer.add(["framerate: {}".format(frameRate)], DataVisualizer.TEXT)
     minutes, seconds = RatUtils.timeCalc(frameCounter // frameRate)
-    dataVisualizer.add("realtime: {:02d}:{:02d}".format(minutes, seconds), DataVisualizer.TEXT)
+    dataVisualizer.add(["realtime: {:02d}:{:02d}".format(minutes, seconds)], DataVisualizer.TEXT)
     minutes, seconds = RatUtils.timeCalc((frameCounter - loadingFrameCounter) // frameRate)
-    dataVisualizer.add("without loads: {:02d}:{:02d}".format(minutes, seconds), DataVisualizer.TEXT)
+    dataVisualizer.add(["without loads: {:02d}:{:02d}".format(minutes, seconds)], DataVisualizer.TEXT)
     dataVisualizer.display(frame)
 
 
 if SPLITS:
-    # I know the numbers look a little derpy, there are multiple ways to fix this
-    # If you want to you may fix it
     splitVisualizer = DataVisualizer(FONT, y=400)
-    speed = 10
+    speed = frameRate
     activeSplit = 0
     while True:
         k = cv.waitKey(0)
@@ -159,20 +162,32 @@ if SPLITS:
         elif k & 0xFF == ord("j"):
             speed += 1
         elif k & 0xFF == ord("k"):
-            speed -= 1
+            if speed != 0:
+                speed -= 1
         elif k & 0xFF == ord("h"):
-            frameCounter -= speed
+            if frameCounter - speed > 0:
+                frameCounter -= speed
+            else:
+                frameCounter = 0
         elif k & 0xFF == ord("l"):
             frameCounter += speed
         elif k & 0xFF == ord(" "):
             activeSplit += 1
+        elif k & 0xFF == 8:
+            SPLIT_POINTS[activeSplit][1] = 0
+            activeSplit -= 1
         if activeSplit > len(SPLIT_POINTS) - 1:
             break
         SPLIT_POINTS[activeSplit][1] = frameCounter
-        splitVisualizer.add("Splits", DataVisualizer.HEADER)
-        splitVisualizer.add("Speed: " + str(speed), DataVisualizer.TEXT)
+        splitVisualizer.add(["Splits"], DataVisualizer.HEADER)
+        splitVisualizer.add(["Speed: " + str(round(speed / frameRate, 2)) + " seconds"], DataVisualizer.TEXT)
         for split in SPLIT_POINTS:
-            splitVisualizer.add("{0: <20}".format(split[0]) + str(split[1]), DataVisualizer.TEXT)
+            minutes, seconds = RatUtils.timeCalc(split[1] // frameRate)
+            if split is SPLIT_POINTS[activeSplit]:
+                splitVisualizer.add([split[0], "{:d}:{:02d}".format(minutes, seconds)], DataVisualizer.TEXT, r=0,
+                                    g=255, b=255)
+            else:
+                splitVisualizer.add([split[0], "{:d}:{:02d}".format(minutes, seconds)], DataVisualizer.TEXT)
         cap.set(cv.CAP_PROP_POS_FRAMES, frameCounter + BEGIN_FRAME)
         ret, frame = cap.read()
         splitVisualizer.display(frame)
@@ -200,14 +215,18 @@ while True:
 
     if SPLITS:
         sv = DataVisualizer(FONT, y=400)
-        sv.add("Splits", DataVisualizer.HEADER)
+        sv.add(["Splits"], DataVisualizer.HEADER)
         for split in SPLIT_POINTS:
             if split[1] < frameCounter:
-                sv.add("{0: <20}".format(split[0]) + str(split[1]), DataVisualizer.TEXT)
+                minutes, seconds = RatUtils.timeCalc(split[1] // frameRate)
+                r, g, b = 0, 255, 0
             elif split is SPLIT_POINTS[activeSplit]:
-                sv.add("{0: <20}".format(split[0]) + str(frameCounter), DataVisualizer.TEXT)
+                minutes, seconds = RatUtils.timeCalc(frameCounter // frameRate)
+                r, g, b = 0, 255, 255
             else:
-                sv.add("{0: <20}".format(split[0]) + str(0), DataVisualizer.TEXT)
+                r, g, b = 200, 200, 200
+                minutes, seconds = RatUtils.timeCalc(0)
+            sv.add([split[0], "{:d}:{:02d}".format(minutes, seconds)], DataVisualizer.TEXT, r=r, g=g, b=b)
         if SPLIT_POINTS[activeSplit][1] == frameCounter:
             activeSplit += 1
         if activeSplit > len(SPLIT_POINTS) - 1:
@@ -216,6 +235,9 @@ while True:
 
     if VISUAL:
         display()
+        if FULLSCREEN:
+            cv.namedWindow("ratatool", cv.WND_PROP_FULLSCREEN)
+            cv.setWindowProperty("ratatool", cv.WND_PROP_FULLSCREEN, cv.WINDOW_FULLSCREEN)
         cv.imshow("ratatool", frame)
         if OUTPUT:
             out.write(frame)
